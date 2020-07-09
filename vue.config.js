@@ -6,15 +6,23 @@ function resolve(dir) {
     return path.join(__dirname, dir)
 }
 module.exports = {
+    publicPath:'flow',
     lintOnSave: false,
     productionSourceMap: false,
     devServer: {
         disableHostCheck: true,
         https: false, // https:{type:Boolean}
-        port: 6969,
-        proxy: {
-            
-        }
+        port: 6969
+        // proxy: {
+        //     '/process': {
+        //         target: "http://172.16.12.180:29004",
+        //         changOrigin: true,
+        //         ws:true,
+        //         pathRewrite:{
+        //             '^/process': '/process'
+        //         }
+        //     }
+        // }
     },
     chainWebpack: config => {
         config.resolve.alias.set('@', resolve('src'));

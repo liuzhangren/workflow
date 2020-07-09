@@ -32,7 +32,7 @@
 <script>
 import { v4 as uuidv4 } from 'uuid';
 export default {
-    props: ["childNodeP"],
+    props: ["childNodeP", 'nodeConfig', 'temp', 'isBranch'],
     data() {
         return {
             visible: false
@@ -44,17 +44,55 @@ export default {
             if (type != 4) {
                 var data;
                 if (type == 1) {
-                    data = {
+                    data = this.isBranch? {
                         "id": uuidv4(),
                         "nodeName": "审核人",
+                        "isBranch": true,
                         "error": true,
                         "type": 1,
-                        "settype": 1,
-                        "selectMode": 0,
-                        "selectRange": 0,
+                        "settype": 4,
+                        "selectMode": 2,
+                        "backMode": 1,
+                        "selectRange": 1,
                         "directorLevel": 1,
                         "replaceByUp": 0,
-                        "examineMode": 1,
+                        "examineMode": 3,
+                        "noHanderAction": 1,
+                        "examineEndDirectorLevel": 0,
+                        "childNode": this.childNodeP,
+                        "conditionNodes": [],
+                        "nodeUserList": [],
+                    }: this.nodeConfig.isBranch? {
+                        "id": uuidv4(),
+                        "nodeName": "审核人",
+                        "isBranch": true,
+                        "error": true,
+                        "type": 1,
+                        "backMode": 1,
+                        "settype": 4,
+                        "selectMode": 2,
+                        "selectRange": 1,
+                        "directorLevel": 1,
+                        "replaceByUp": 0,
+                        "examineMode": 3,
+                        "noHanderAction": 1,
+                        "examineEndDirectorLevel": 0,
+                        "childNode": this.childNodeP,
+                        "conditionNodes": [],
+                        "nodeUserList": [],
+                    }:{
+                        "id": uuidv4(),
+                        "nodeName": "审核人",
+                        "isBranch": false,
+                        "error": true,
+                        "type": 1,
+                        "backMode": 1,
+                        "settype": 4,
+                        "selectMode": 2,
+                        "selectRange": 1,
+                        "directorLevel": 1,
+                        "replaceByUp": 0,
+                        "examineMode": 3,
                         "noHanderAction": 1,
                         "examineEndDirectorLevel": 0,
                         "childNode": this.childNodeP,
@@ -62,9 +100,19 @@ export default {
                         "nodeUserList": [],
                     }
                 } else if (type == 2) {
-                    data = {
+                    data = this.isBranch? {
                         "id": uuidv4(),
                         "nodeName": "抄送人",
+                        "isBranch": true,
+                        "type": 2,
+                        "ccSelfSelectFlag": 1,
+                        "childNode": this.childNodeP,
+                        "nodeUserList": [],
+                        "conditionNodes": [],
+                    }:{
+                        "id": uuidv4(),
+                        "nodeName": "抄送人",
+                        "isBranch": false,
                         "type": 2,
                         "ccSelfSelectFlag": 1,
                         "childNode": this.childNodeP,
@@ -82,8 +130,10 @@ export default {
                     "conditionNodes": [{
                         "id": uuidv4(),
                         "nodeName": "条件1",
+                        "isBranch": true,
                         "error": true,
                         "type": 3,
+                        "isCondition": true,
                         "priorityLevel": 1,
                         "conditionList": [],
                         "nodeUserList": [],
@@ -92,6 +142,8 @@ export default {
                     }, {
                         "id": uuidv4(),
                         "nodeName": "条件2",
+                        "isBranch": true,
+                        "isCondition": true,
                         "type": 3,
                         "priorityLevel": 2,
                         "conditionList": [],

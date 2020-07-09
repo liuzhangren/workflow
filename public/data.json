@@ -16,7 +16,7 @@
         "directorMaxLevel": 4,
         "flowPermission": [],
         "nodeConfig": {
-          "pkId": "sid-start-node",
+          "id": "start-node",
           "nodeName": "发起人",
           "type": 0,
           "priorityLevel": "",

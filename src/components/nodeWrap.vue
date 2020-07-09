@@ -30,7 +30,7 @@
                     </div> -->
                 </div>
             </div>
-            <addNode :childNodeP.sync="nodeConfig.childNode"></addNode>
+            <addNode :nodeConfig='nodeConfig' :childNodeP.sync="nodeConfig.childNode"></addNode>
         </div>
         <div class="branch-wrap" v-if="nodeConfig.type==4">
             <div class="branch-box-wrap">
@@ -55,10 +55,10 @@
                                         <i class="anticon anticon-exclamation-circle" style="color: rgb(242, 86, 67);"></i>
                                     </div> -->
                                 </div>
-                                <addNode :childNodeP.sync="item.childNode"></addNode>
+                                <addNode isBranch="1" :nodeConfig="nodeConfig" :childNodeP.sync="item.childNode"></addNode>
                             </div>
                         </div>
-                        <nodeWrap v-if="item.childNode && item.childNode" :nodeConfig.sync="item.childNode" :tableId="tableId"
+                        <nodeWrap :test.sync="test" v-if="item.childNode && item.childNode"  :nodeConfig.sync="item.childNode" :tableId="tableId"
                         :isTried.sync="isTried" :directorMaxLevel="directorMaxLevel"></nodeWrap>
                         <div class="top-left-cover-line" v-if="index==0"></div>
                         <div class="bottom-left-cover-line" v-if="index==0"></div>
@@ -66,32 +66,223 @@
                         <div class="bottom-right-cover-line" v-if="index==nodeConfig.conditionNodes.length-1"></div>
                     </div>
                 </div>
-                <addNode :childNodeP.sync="nodeConfig.childNode"></addNode>
+                <addNode :nodeConfig="nodeConfig" :childNodeP.sync="nodeConfig.childNode"></addNode>
             </div>
         </div>
         <el-drawer
             class="drawer"
             :title="clickItemName"
-            :before-close="handleClose"
-            :visible.sync="dialog"
+            :visible.sync="conditionVisible"
             direction="ltr"
             custom-class="demo-drawer"
             ref="drawer"
         >
-            <div class="demo-drawer__content">
-                <el-form :model="form">
-                <el-form-item label="自定义key" :label-width="formLabelWidth">
-                    <el-input v-model="form.key" autocomplete="off"></el-input>
-                </el-form-item>
-                <el-form-item label="自定义value" :label-width="formLabelWidth">
-                    <el-input v-model="form.value" autocomplete="off"></el-input>
-                </el-form-item>
+            <div class="demo-drawer__content" >
+                <el-form  v-for="(item, index) in conditionData" :key="index" :model="conditionForm">
+                    <el-form-item :label="item.conditionLabel" :label-width="formLabelWidth">
+                        <el-select v-model="conditionForm[item.conditionKey]" autocomplete="off">
+                            <el-option
+                                v-for="_item in item.list"
+                                :key="_item.id"
+                                :label="_item.dictName"
+                                :value="_item.dictCode">
+                            </el-option>
+                        </el-select>
+                    </el-form-item>
                 </el-form>
                 <div class="demo-drawer__footer">
-                <el-button @click="cancelForm">取消</el-button>
-                <el-button type="primary" @click="confirm" :loading="loading">{{ loading ? '提交中 ...' : '确 定' }}</el-button>
+                    <el-button type="primary" @click="confirm" :loading="loading">{{ loading ? '提交中 ...' : '确 定' }}</el-button>
+                    <el-button @click="cancelForm">取消</el-button>
                 </div>
             </div>
+        </el-drawer>
+        <el-dialog title="提示" :visible.sync="tipVisible">
+            <div class="ant-confirm-body">
+                <i class="anticon anticon-close-circle" style="color: #f00;"></i>
+                <span class="ant-confirm-title">当前无法发布</span>
+                <div class="ant-confirm-content">
+                    <div>
+                        <p class="error-modal-desc">以下内容不完善，需进行修改</p>
+                        <div class="error-modal-list">
+                            <div class="error-modal-item" v-for="(item,index) in tipList" :key="index">
+                                <div class="error-modal-item-label">流程设计</div>
+                                <div class="error-modal-item-content">{{item.name}} 未选择{{item.type}}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <span slot="footer" class="dialog-footer">
+                <el-button @click="tipVisible = false">我知道了</el-button>
+                <el-button type="primary" @click="tipVisible = false">前往修改</el-button>
+            </span>
+        </el-dialog>
+        <el-drawer title="审批人设置" :visible.sync="approverDrawer" direction="rtl" class="set_promoter" size="400px" :before-close="saveApprover"> 
+            <el-tabs v-model="approverTabsVal" @tab-click="changeTabsType">
+                <el-tab-pane label="基础配置" name="1">
+                    <div class="demo-drawer__content">
+                        <div class="drawer_content">
+                            <div class="approver_content">
+                                <el-radio-group v-model="approverConfig.settype" class="clear" @change="changeType">
+                                    <el-radio :label="1">指定成员</el-radio>
+                                    <el-radio :label="2">主管</el-radio>
+                                    <el-radio :label="4">发起人自选</el-radio>
+                                    <el-radio :label="5">发起人自己</el-radio>
+                                    <el-radio :label="7">连续多级主管</el-radio>
+                                </el-radio-group>
+                                <el-button type="primary" @click="addApprover" v-if="approverConfig.settype==1">添加/修改成员</el-button>
+                                <p class="selected_list" v-if="approverConfig.settype==1">
+                                    <span v-for="(item,index) in approverConfig.nodeUserList" :key="index">{{item.name}}
+                                        <img src="@/assets/images/add-close1.png" @click="removeEle(approverConfig.nodeUserList,item,'targetId')">
+                                    </span>
+                                    <a v-if="approverConfig.nodeUserList.length!=0" @click="approverConfig.nodeUserList=[]">清除</a>
+                                </p>
+                            </div>
+                            <div class="approver_manager" v-if="approverConfig.settype==2">
+                                <p>
+                                    <span>发起人的：</span>
+                                    <select v-model="approverConfig.directorLevel">
+                                        <option v-for="item in directorMaxLevel" :value="item" :key="item">{{item==1?'直接':'第'+item+'级'}}主管</option>
+                                    </select>
+                                </p>
+                                <p class="tip">找不到主管时，由上级主管代审批</p>
+                            </div>
+                            <div class="approver_self" v-if="approverConfig.settype==5">
+                                <p>该审批节点设置“发起人自己”后，审批人默认为发起人</p>
+                            </div>
+                            <div class="approver_self_select" v-show="approverConfig.settype==4">
+                                <el-radio-group v-model="approverConfig.selectMode" @change="changeMode" style="width: 100%;">
+                                    <el-radio :label="1">选一个人</el-radio>
+                                    <el-radio :label="2">选多个人</el-radio>
+                                </el-radio-group>
+                                <h3>选择范围</h3>
+                                <el-radio-group v-model="approverConfig.selectRange" style="width: 100%;" @change="changeRange">
+                                    <el-radio :label="1">全公司</el-radio>
+                                    <el-radio :label="2">指定成员</el-radio>
+                                    <el-radio :label="3">指定角色</el-radio>
+                                </el-radio-group>
+                                <el-button type="primary" @click="addApprover" v-if="approverConfig.selectRange==2">添加/修改成员</el-button>
+                                <el-button type="primary" @click="addRoleApprover" v-if="approverConfig.selectRange==3">添加/修改角色</el-button>
+                                <p class="selected_list" v-if="approverConfig.selectRange==2||approverConfig.selectRange==3">
+                                    <span v-for="(item,index) in approverConfig.nodeUserList" :key="index">{{item.name}}
+                                        <img src="@/assets/images/add-close1.png" @click="removeEle(approverConfig.nodeUserList,item,'targetId')">
+                                    </span>
+                                    <a v-if="approverConfig.nodeUserList.length!=0&&approverConfig.selectRange!=1" @click="approverConfig.nodeUserList=[]">清除</a>
+                                </p>
+                            </div>
+                            <div class="approver_manager" v-if="approverConfig.settype==7">
+                                <p>审批终点</p>
+                                <p style="padding-bottom:20px">
+                                    <span>发起人的：</span>
+                                    <select v-model="approverConfig.examineEndDirectorLevel">
+                                        <option v-for="item in directorMaxLevel" :value="item" :key="item">{{item==1?'最高':'第'+item}}层级主管</option>
+                                    </select>
+                                </p>
+                            </div>
+                            <div class="approver_some" v-if="(approverConfig.settype==1&&approverConfig.nodeUserList.length>1)||approverConfig.settype==2||(approverConfig.settype==4&&approverConfig.selectMode==2)">
+                                <p>多人审批时采用的审批方式</p>
+                                <el-radio-group v-model="approverConfig.examineMode" @change="changeExamineMode" class="clear">
+                                    <el-radio :label="1">依次审批</el-radio>
+                                    <br/>
+                                    <el-radio :label="2" v-if="approverConfig.settype!=2">会签(须所有审批人同意)</el-radio>
+                                    <br />
+                                    <el-radio :label="3">或签</el-radio>
+                                </el-radio-group>
+                            </div>
+                            <div class="approver_some" v-if="approverConfig.settype==2||approverConfig.settype==7">
+                                <p>审批人为空时</p>
+                                <el-radio-group v-model="approverConfig.noHanderAction" class="clear">
+                                    <el-radio :label="1">自动审批通过/不允许发起</el-radio>
+                                    <br/>
+                                    <el-radio :label="2">转交给审核管理员</el-radio>
+                                </el-radio-group>
+                            </div>
+                            <div class="demo-drawer__footer clear">
+                                <el-button type="primary" @click="saveApprover">保存设置</el-button>
+                                <el-button @click="approverDrawer = false">取 消</el-button>
+                            </div>
+                        </div>
+
+                        <el-dialog title="选择成员" :visible.sync="approverVisible" width="600px" append-to-body class="promoter_person">
+                            <div class="person_body clear">
+                                <div class="person_tree l">
+                                    <input type="text" placeholder="搜索成员" v-model="approverSearchName" @input="getDebounceData($event)">
+                                    <p class="ellipsis tree_nav" v-if="!approverSearchName">
+                                        <span @click="getDepartmentList(0)" class="ellipsis">天下</span>
+                                        <span v-for="(item,index) in departments.titleDepartments" class="ellipsis" 
+                                        :key="index+'a'" @click="getDepartmentList(item.id)">{{item.departmentName}}</span>   
+                                    </p>
+                                    <ul>
+                                        <li v-for="(item,index) in departments.childDepartments" :key="index+'b'" class="check_box not">
+                                            <a><img src="@/assets/images/icon_file.png">{{item.departmentName}}</a>
+                                            <i @click="getDepartmentList(item.id)">下级</i>
+                                        </li>
+                                        <li v-for="(item,index) in departments.employees" :key="index+'c'" class="check_box">
+                                            <a :class="toggleClass(approverEmplyessList,item)&&'active'" @click="toChecked(approverEmplyessList,item)" :title="item.departmentNames">
+                                                <img src="@/assets/images/icon_people.png">{{item.employeeName}}</a>
+                                        </li>
+                                    </ul>
+                                </div>
+                                <div class="has_selected l">
+                                    <p class="clear">已选（{{approverEmplyessList.length}}）
+                                        <a @click="approverEmplyessList=[]">清空</a>
+                                    </p>
+                                    <ul>
+                                        <li v-for="(item,index) in approverEmplyessList" :key="index+'e'">
+                                            <img src="@/assets/images/icon_people.png">
+                                            <span>{{item.employeeName}}</span>
+                                            <img src="@/assets/images/cancel.png" @click="removeEle(approverEmplyessList,item)">
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                            <span slot="footer" class="dialog-footer">
+                                <el-button @click="approverVisible = false">取 消</el-button>
+                                <el-button type="primary" @click="sureApprover">确 定</el-button>
+                            </span>
+                        </el-dialog>
+                        <el-dialog title="选择角色" :visible.sync="approverRoleVisible" width="600px" append-to-body class="promoter_person">
+                            <div class="person_body clear">
+                                <div class="person_tree l">
+                                    <input type="text" placeholder="搜索角色" v-model="approverRoleSearchName" @input="getDebounceData($event,2)">
+                                    <ul>
+                                        <li v-for="(item,index) in roles" :key="index+'b'" class="check_box not"
+                                            :class="toggleClass(roleList,item,'roleId')&&'active'" @click="roleList=[item]">
+                                            <a :title="item.description"><img src="@/assets/images/icon_role.png">{{item.roleName}}</a>
+                                        </li>
+                                    </ul>
+                                </div>
+                                <div class="has_selected l">
+                                    <p class="clear">已选（{{roleList.length}}）
+                                        <a @click="roleList=[]">清空</a>
+                                    </p>
+                                    <ul>
+                                        <li v-for="(item,index) in roleList" :key="index+'e'">
+                                            <img src="@/assets/images/icon_role.png">
+                                            <span>{{item.roleName}}</span>
+                                            <img src="@/assets/images/cancel.png" @click="removeEle(roleList,item,'roleId')">
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                            <span slot="footer" class="dialog-footer">
+                                <el-button @click="approverRoleVisible = false">取 消</el-button>
+                                <el-button type="primary" @click="sureApprover">确 定</el-button>
+                            </span>
+                        </el-dialog>
+                    </div>
+                </el-tab-pane>
+                <el-tab-pane class="" label="回退配置" name="2">
+                    <el-radio-group v-model="approverConfig.backMode" style="width: 100%;" @change="changeBackMode">
+                        <el-radio :label="1">回退到上一节点</el-radio>
+                        <el-radio :label="2">回退到发起人</el-radio>
+                    </el-radio-group>
+                    <div class="demo-drawer__footer clear">
+                        <el-button type="primary" @click="saveApprover">保存设置</el-button>
+                        <el-button @click="approverDrawer = false">取 消</el-button>
+                    </div>
+                </el-tab-pane>
+            </el-tabs>
         </el-drawer>
         <!-- <el-drawer title="发起人" :visible.sync="promoterDrawer" direction="rtl" class="set_promoter" size="550px" :before-close="savePromoter"> 
             <div class="demo-drawer__content">
@@ -505,7 +696,7 @@
                 </div>
             </div>
         </el-drawer> -->
-        <nodeWrap v-if="nodeConfig.childNode && nodeConfig.childNode" :nodeConfig.sync="nodeConfig.childNode" :tableId="tableId"
+        <nodeWrap  v-if="nodeConfig.childNode && nodeConfig.childNode" :nodeConfig.sync="nodeConfig.childNode" :tableId="tableId"
         :isTried.sync="isTried" :directorMaxLevel="directorMaxLevel"></nodeWrap>
     </div>
 </template>
@@ -515,17 +706,25 @@ export default {
     props: ["nodeConfig", "flowPermission", "directorMaxLevel", "isTried", "tableId"],
     data() {
         return {
-            dialog: false,
-            form: {
-               key: '',
-               value: ''
-            },
+            tipVisible: false,
+            tipList: [],
+            conditionVisible: false,
+            conditionForm: {},
+            approverTabsVal: '1',
             formLabelWidth: '120px',
+            conditionData: {},
             clickItemName: '',
             loading: false,
             placeholderList: ["发起人", "审核人", "抄送人"],
             isInputList: [],
             isInput: false,
+            approverConfig: {
+                settype: '',
+                selectMode: '',
+                examineMode: '',
+                selectRange: '',
+                backMode: ''
+            },
             promoterVisible: false,
             promoterDrawer: false,
             departments: {},
@@ -536,7 +735,6 @@ export default {
             approverDrawer: false,
             approverVisible: false,
             approverRoleVisible: false,
-            approverConfig: {},
             approverEmplyessList: [],
             approverSearchName: "",
             roles: [],
@@ -551,7 +749,6 @@ export default {
             copyerRoleList: [],
             ccSelfSelectFlag: [],
             conditionDrawer: false,
-            conditionVisible: false,
             conditionConfig: {},
             conditionsConfig: {
                 conditionNodes: [],
@@ -564,6 +761,7 @@ export default {
             conditionDepartmentList: [],
             conditionEmployessList: [],
             conditionRoleList: [],
+            test: ''
         }
     },
     mounted() {
@@ -577,18 +775,36 @@ export default {
             }
         }
     },
+
     methods: {
+        changeBackMode(val) {
+            this.$set(this.approverConfig, 'backMode', val)
+        },
+        changeTabsType(e) {
+            this.approverTabsVal = e.name
+        },
+        changeExamineMode(val) {
+            // this.$set(this.approverConfig, 'examineMode', val)
+            
+        },
+        changeMode(val) {
+            this.approverConfig.selectMode = val
+        },
         confirm() {
             const currentId = this.currentClickedItem.id
             this.nodeConfig.conditionNodes.forEach((c) => {
                 if(c.id == currentId) {
-                    c.conditionsequenceflow = {
-                        key: this.form.key,
-                        value: this.form.value
-                    }
+                    const str = Object.keys(this.conditionForm).reduce((r, c) => {
+                        if(this.conditionForm[c]!='') {
+                            r = `${r}${c}=='${this.conditionForm[c].split(',')[0]}'&&`
+                        }
+                        return r
+                    }, '')
+                    c.conditionsequenceflow = str.length ==0? '': "${"+ `${str.substring(0,str.length-2)}`+"}";
                 }
             })
-            this.dialog = false
+            
+            this.conditionVisible = false
         },
         clickEvent(index) {
             if (index || index === 0) {
@@ -608,10 +824,11 @@ export default {
         },
         conditionStr(item, index) {
             var { conditionList, nodeUserList, conditionsequenceflow } = item;
-            debugger
+            
             if(!conditionsequenceflow || conditionsequenceflow =='') {
                 return '请设置条件'
             }else {
+                // return 
                 return '点击查看条件'
             }
             // if (conditionList.length == 0) {
@@ -882,18 +1099,24 @@ export default {
         },
         changeRange(val) {
             this.approverConfig.nodeUserList = [];
+            this.$set(this.approverConfig, 'selectRange', val)
         },
         changeType(val) {
-            this.approverConfig.nodeUserList = [];
-            this.approverConfig.examineMode = 1;
-            this.approverConfig.noHanderAction = 2;
+            // this.approverConfig.nodeUserList = [];
+            // this.$set(this.approverConfig, 'nodeUserList', [])
+            // // this.approverConfig.examineMode = 1;
+            // this.$set(this.approverConfig, 'examineMode', 1)
+            // this.$set(this.approverConfig, 'noHanderAction', 1)
+            // this.approverConfig.noHanderAction = 2;
             if (val == 2) {
-                this.approverConfig.directorLevel = 1;
+                this.$set(this.approverConfig, 'directorLevel', 1)
+                // this.approverConfig.directorLevel = 1;
             } else if (val == 4) {
-                this.approverConfig.selectMode = 1;
-                this.approverConfig.selectRange = 1;
+                this.$set(this.approverConfig, 'selectMode', 1)
+                // this.approverConfig.selectMode = '1';
+                this.$set(this.approverConfig, 'selectRange', 1)
             } else if (val == 7) {
-                this.approverConfig.examineEndDirectorLevel = 1
+                this.$set(this.approverConfig, 'examineEndDirectorLevel', 1)
             }
         },
         addApprover() {
@@ -983,8 +1206,18 @@ export default {
             }
         },
         saveApprover() {
-            this.approverConfig.error = !this.setApproverStr(this.approverConfig)
-            this.$emit("update:nodeConfig", this.approverConfig);
+            // this.approverConfig.error = !this.setApproverStr(this.approverConfig)
+            this.$emit("update:nodeConfig", {...this.nodeConfig, ...this.approverConfig});
+            this.approverConfig = {
+                settype: 4,
+                selectMode: 2,
+                examineMode: 3,
+                selectRange: 1
+            }
+            // this.$set(this.approverConfig, 'settype', 4)
+            // this.$set(this.approverConfig, 'selectMode', 2)
+            // this.$set(this.approverConfig, 'examineMode', 3)
+            // this.$set(this.approverConfig, 'selectRange', 1)
             this.approverDrawer = false;
         },
         addPromoter() {
@@ -1095,6 +1328,7 @@ export default {
                 "nodeName": "条件" + len,
                 "type": 3,
                 "id": uuidv4(),
+                "isCondition": true,
                 "priorityLevel": len,
                 "conditionList": [],
                 "nodeUserList": [],
@@ -1133,7 +1367,7 @@ export default {
             if (this.loading) {
                 return;
             }
-            this.dialog = false
+            this.conditionVisible = false
             // this.$confirm('确定要提交表单吗？')
             //     .then(_ => {
             //     this.loading = true;
@@ -1149,12 +1383,16 @@ export default {
         },
         cancelForm() {
             this.loading = false;
-            this.dialog = false;
+            this.conditionVisible = false;
         },
         setPerson(item) {
             var { type } = this.nodeConfig;
             if(type == 4) {
-                this.dialog = true
+                this.conditionVisible = true
+            }
+            else if(type == 1) {
+                this.approverConfig = JSON.parse(JSON.stringify(this.nodeConfig))
+                this.approverDrawer = true
             }
             this.currentClickedItem = item
             this.nodeConfig.conditionNodes.forEach((c) => {
@@ -1163,30 +1401,45 @@ export default {
                 }
             })
             const { conditionsequenceflow } = item
+            const conditionData = JSON.parse(sessionStorage.getItem('conditions'))
+            this.conditionData = Object.values(conditionData)
+            this.conditionForm = this.conditionData.reduce((r, c) => {
+                return {
+                    ...r,
+                    [c.conditionKey]: ''
+                }
+            }, {})
             if(conditionsequenceflow) {
-                this.form.key = conditionsequenceflow.key
-                this.form.value = conditionsequenceflow.value
+                const str = conditionsequenceflow.substring(0, conditionsequenceflow.length - 1).slice(2)
+                
+                this.conditionForm = str.split('&&').reduce((r, c) => {
+                    const k = c.split('==')[0]
+                    const v = c.split('==')[1]
+                    return {
+                        ...r,
+                        [k]: v.substring(0, v.length - 1).substr(1)
+                    }
+                }, {})
             }
             
-            // console.log(item)
-            // debugger
-            // if (type == 0) {
-            //     this.promoterDrawer = true;
-            //     this.flowPermission1 = this.flowPermission;
-            // } else if (type == 1) {
-            //     this.approverDrawer = true;
-            //     this.approverConfig = JSON.parse(JSON.stringify(this.nodeConfig))
-            //     this.approverConfig.settype = this.approverConfig.settype ? this.approverConfig.settype : 1
-            // } else if (type == 2) {
-            //     this.copyerDrawer = true;
-            //     this.copyerConfig = JSON.parse(JSON.stringify(this.nodeConfig))
-            //     this.ccSelfSelectFlag = this.copyerConfig.ccSelfSelectFlag == 0 ? [] : [this.copyerConfig.ccSelfSelectFlag]
-            // } else {
-            //     this.conditionDrawer = true
-            //     this.bPriorityLevel = priorityLevel;
-            //     this.conditionsConfig = JSON.parse(JSON.stringify(this.nodeConfig))
-            //     this.conditionConfig = this.conditionsConfig.conditionNodes[priorityLevel - 1]
-            // }
+
+            if (type == 0) {
+                this.promoterDrawer = true;
+                this.flowPermission1 = this.flowPermission;
+            } else if (type == 1) {
+                // this.approverDrawer = true;
+                // const config = JSON.parse(JSON.stringify(this.nodeConfig))
+                // this.approverConfig.settype = this.approverConfig.settype != 4 ? this.approverConfig.settype : 1
+            } else if (type == 2) {
+                this.copyerDrawer = true;
+                this.copyerConfig = JSON.parse(JSON.stringify(this.nodeConfig))
+                this.ccSelfSelectFlag = this.copyerConfig.ccSelfSelectFlag == 0 ? [] : [this.copyerConfig.ccSelfSelectFlag]
+            } else {
+                this.conditionDrawer = true
+                this.bPriorityLevel = priorityLevel;
+                this.conditionsConfig = JSON.parse(JSON.stringify(this.nodeConfig))
+                this.conditionConfig = this.conditionsConfig.conditionNodes[priorityLevel - 1]
+            }
         },
         arrTransfer(index, type = 1) {//向左-1,向右1
             this.nodeConfig.conditionNodes[index] = this.nodeConfig.conditionNodes.splice(index + type, 1, this.nodeConfig.conditionNodes[index])[0];
@@ -1492,5 +1745,11 @@ el-radio-group {
 }
 .demo-drawer__content {
     padding-right: 20px;
+}
+.el-tabs__nav-scroll {
+    margin-left: 20px;
+}
+.el-tab-pane {
+    padding: 12px;
 }
 </style>

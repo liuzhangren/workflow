@@ -12,7 +12,8 @@ import {
     Select,
     Input,
     FormItem,
-    Option
+    Option,
+    Card
 } from 'element-ui'
 
 import 'element-ui/lib/theme-chalk/index.css'
@@ -34,6 +35,7 @@ Vue.use(Select)
 Vue.use(Input)
 Vue.use(FormItem)
 Vue.use(Option)
+Vue.use(Card)
 
 Vue.prototype.$message = {
     error(msg) {

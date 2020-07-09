@@ -5,6 +5,7 @@ Vue.use(Router)
 
 export default new Router({
     mode: 'history',
+    base: '/flow/',
     routes: [{
         path: '/',
         redirect: '/approval/setting'

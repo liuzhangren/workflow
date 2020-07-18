@@ -76,6 +76,7 @@
             direction="ltr"
             custom-class="demo-drawer"
             ref="drawer"
+            append-to-body
         >
             <div class="demo-drawer__content" >
                 <el-form  v-for="(item, index) in conditionData" :key="index" :model="conditionForm">
@@ -117,7 +118,7 @@
                 <el-button type="primary" @click="tipVisible = false">前往修改</el-button>
             </span>
         </el-dialog>
-        <el-drawer title="审批人设置" :visible.sync="approverDrawer" direction="rtl" class="set_promoter" size="400px" :before-close="saveApprover"> 
+        <el-drawer title="审批人设置" :visible.sync="approverDrawer" direction="rtl" class="set_promoter" size="400px" :before-close="saveApprover" append-to-body> 
             <el-tabs v-model="approverTabsVal" @tab-click="changeTabsType">
                 <el-tab-pane label="基础配置" name="1">
                     <div class="demo-drawer__content">
@@ -125,12 +126,13 @@
                             <div class="approver_content">
                                 <el-radio-group v-model="approverConfig.settype" class="clear" @change="changeType">
                                     <el-radio :label="1">指定成员</el-radio>
-                                    <el-radio :label="2">主管</el-radio>
+                                    <!-- <el-radio :label="2">主管</el-radio> -->
                                     <el-radio :label="4">发起人自选</el-radio>
                                     <el-radio :label="5">发起人自己</el-radio>
-                                    <el-radio :label="7">连续多级主管</el-radio>
+                                    <!-- <el-radio :label="7">连续多级主管</el-radio> -->
                                 </el-radio-group>
                                 <el-button type="primary" @click="addApprover" v-if="approverConfig.settype==1">添加/修改成员</el-button>
+                                <el-button type="primary" v-if="status == 2" @click="showAuthBtnConfig">按钮权限配置</el-button>
                                 <p class="selected_list" v-if="approverConfig.settype==1">
                                     <span v-for="(item,index) in approverConfig.nodeUserList" :key="index">{{item.name}}
                                         <img src="@/assets/images/add-close1.png" @click="removeEle(approverConfig.nodeUserList,item,'targetId')">
@@ -151,16 +153,32 @@
                                 <p>该审批节点设置“发起人自己”后，审批人默认为发起人</p>
                             </div>
                             <div class="approver_self_select" v-show="approverConfig.settype==4">
-                                <el-radio-group v-model="approverConfig.selectMode" @change="changeMode" style="width: 100%;">
+                                <!-- <el-radio-group v-model="approverConfig.selectMode" @change="changeMode" style="width: 100%;">
                                     <el-radio :label="1">选一个人</el-radio>
                                     <el-radio :label="2">选多个人</el-radio>
-                                </el-radio-group>
+                                </el-radio-group> -->
+                                <el-select v-model="approverConfig.selectMode" placeholder="请选择">
+                                  <el-option
+                                    v-for="item in selectModeOptions"
+                                    :key="item.value"
+                                    :label="item.label"
+                                    :value="item.value">
+                                  </el-option>
+                                </el-select>
                                 <h3>选择范围</h3>
-                                <el-radio-group v-model="approverConfig.selectRange" style="width: 100%;" @change="changeRange">
+                                <!-- <el-radio-group v-model="approverConfig.selectRange" style="width: 100%;" @change="changeRange">
                                     <el-radio :label="1">全公司</el-radio>
                                     <el-radio :label="2">指定成员</el-radio>
                                     <el-radio :label="3">指定角色</el-radio>
-                                </el-radio-group>
+                                </el-radio-group> -->
+                                <el-select v-model="approverConfig.selectRange" placeholder="请选择">
+                                  <el-option
+                                    v-for="item in selectRangeOptions"
+                                    :key="item.value"
+                                    :label="item.label"
+                                    :value="item.value">
+                                  </el-option>
+                                </el-select>
                                 <el-button type="primary" @click="addApprover" v-if="approverConfig.selectRange==2">添加/修改成员</el-button>
                                 <el-button type="primary" @click="addRoleApprover" v-if="approverConfig.selectRange==3">添加/修改角色</el-button>
                                 <p class="selected_list" v-if="approverConfig.selectRange==2||approverConfig.selectRange==3">
@@ -207,19 +225,22 @@
                             <div class="person_body clear">
                                 <div class="person_tree l">
                                     <input type="text" placeholder="搜索成员" v-model="approverSearchName" @input="getDebounceData($event)">
-                                    <p class="ellipsis tree_nav" v-if="!approverSearchName">
-                                        <span @click="getDepartmentList(0)" class="ellipsis">天下</span>
-                                        <span v-for="(item,index) in departments.titleDepartments" class="ellipsis" 
-                                        :key="index+'a'" @click="getDepartmentList(item.id)">{{item.departmentName}}</span>   
-                                    </p>
+                                    <p><a @click="toLastLevel()">上级</a></p>
+                                    <!-- <p class="ellipsis tree_nav" v-if="!approverSearchName">
+                                        <span v-for="(item,index) in selectPersonShow" class="ellipsis" 
+                                        :key="index+'a'" @click="getDepartmentList(item.id)">{{item.userName}}</span>   
+                                    </p> -->
                                     <ul>
-                                        <li v-for="(item,index) in departments.childDepartments" :key="index+'b'" class="check_box not">
-                                            <a><img src="@/assets/images/icon_file.png">{{item.departmentName}}</a>
+                                        <li v-for="(item,index) in selectPersonShow" :key="index+'b'" class="check_box not">
+                                          <template v-if="item.orgName && !item.userName">
+                                            <a><img src="@/assets/images/icon_file.png">{{item.orgName}}</a>
                                             <i @click="getDepartmentList(item.id)">下级</i>
-                                        </li>
-                                        <li v-for="(item,index) in departments.employees" :key="index+'c'" class="check_box">
+                                          </template>
+                                          <template v-if="item.userName">
                                             <a :class="toggleClass(approverEmplyessList,item)&&'active'" @click="toChecked(approverEmplyessList,item)" :title="item.departmentNames">
-                                                <img src="@/assets/images/icon_people.png">{{item.employeeName}}</a>
+                                                <img src="@/assets/images/icon_people.png">{{`${item.userName}(${item.account})`}}
+                                            </a>
+                                          </template>
                                         </li>
                                     </ul>
                                 </div>
@@ -230,14 +251,14 @@
                                     <ul>
                                         <li v-for="(item,index) in approverEmplyessList" :key="index+'e'">
                                             <img src="@/assets/images/icon_people.png">
-                                            <span>{{item.employeeName}}</span>
+                                            <span>{{`${item.employeeName?item.employeeName:item.userName}(${item.account?item.account:item.id})`}}</span>
                                             <img src="@/assets/images/cancel.png" @click="removeEle(approverEmplyessList,item)">
                                         </li>
                                     </ul>
                                 </div>
                             </div>
                             <span slot="footer" class="dialog-footer">
-                                <el-button @click="approverVisible = false">取 消</el-button>
+                                <el-button @click="approverVisible = false; clickIds = []">取 消</el-button>
                                 <el-button type="primary" @click="sureApprover">确 定</el-button>
                             </span>
                         </el-dialog>
@@ -706,6 +727,9 @@ export default {
     props: ["nodeConfig", "flowPermission", "directorMaxLevel", "isTried", "tableId"],
     data() {
         return {
+            clickIds: [],
+            persons: {},
+            selectPersonShow: [],
             tipVisible: false,
             tipList: [],
             conditionVisible: false,
@@ -725,6 +749,31 @@ export default {
                 selectRange: '',
                 backMode: ''
             },
+            selectModeOptions: [
+              {
+                value: 1,
+                label: '选一个人'
+              }, 
+              {
+                value: 2,
+                label: '选多个人'
+              }
+            ],
+            selectRangeOptions: [
+              {
+                value: 1,
+                label: '全公司'
+              },
+              {
+                value: 2,
+                label: '指定成员'
+              },
+              {
+                value: 3,
+                label: '角色'
+              }
+            ],
+            status: '',
             promoterVisible: false,
             promoterDrawer: false,
             departments: {},
@@ -765,6 +814,7 @@ export default {
         }
     },
     mounted() {
+        this.status = JSON.parse(sessionStorage.getItem('status'))
         if (this.nodeConfig.type == 1) {
             this.nodeConfig.error = !this.setApproverStr(this.nodeConfig)
         } else if (this.nodeConfig.type == 2) {
@@ -777,6 +827,43 @@ export default {
     },
 
     methods: {
+        showAuthBtnConfig() {
+          // alert(JSON.stringify(this.nodeConfig))
+          // sessionStorage.setItem('test', JSON.stringify(this.nodeConfig))
+          window.parent.postMessage({ ...this.nodeConfig, showAuthBtnModal: true}, '*')
+        },
+        toLastLevel() {
+          const temp = this.clickIds.slice(0, this.clickIds.length - 1)
+          let target = this.persons
+          for(let i = 0; i < temp.length; i++) {
+            target = target[temp[i]]
+          }
+          if(target.list) {
+              this.selectPersonShow = target.list.reduce((r, c) => {
+                return [
+                  ...r,
+                  {
+                    userName: c.userName,
+                    orgNo: c.orgNo,
+                    account: c.account,
+                    postName: c.postName
+                  }
+                ]
+              }, [])
+            }else {
+              this.selectPersonShow = Object.keys(target).reduce((r, c) => {
+                return [
+                  ...r,
+                  {
+                    id: c,
+                    orgName: target[c].orgName
+                  }
+                ]
+              }, [])
+              // this.selectPersonShow[parentId].list
+            }
+            this.clickIds = []
+        },
         changeBackMode(val) {
             this.$set(this.approverConfig, 'backMode', val)
         },
@@ -1016,22 +1103,30 @@ export default {
             this.$emit("update:nodeConfig", this.conditionsConfig);
         },
         getDebounceData(event, type = 1) {
-            this.$func.debounce(function () {
-                if (event.target.value) {
-                    if (type == 1) {
-                        this.departments.childDepartments = [];
-                        this.$axios.get(`/employees.json?searchName=${event.target.value}&pageNum=1&pageSize=30`).then(res => {
-                            this.departments.employees = res.data.list
-                        })
-                    } else {
-                        this.$axios.get(`/roles.json?searchName=${event.target.value}&pageNum=1&pageSize=30`).then(res => {
-                            this.roles = res.data.list
-                        })
-                    }
-                } else {
-                    type == 1 ? this.getDepartmentList() : this.getRoleList();
-                }
-            }.bind(this))()
+            this.$axios.get('/platform/get/v1/linkage', {
+              params: {
+                content: event.target.value
+              }
+            }).then((res) => {
+              const { data } = res
+              this.selectPersonShow = data
+            })
+            // this.$func.debounce(function () {
+            //     if (event.target.value) {
+            //         if (type == 1) {
+            //             this.departments.childDepartments = [];
+            //             this.$axios.get(`/employees.json?searchName=${event.target.value}&pageNum=1&pageSize=30`).then(res => {
+            //                 this.departments.employees = res.data.list
+            //             })
+            //         } else {
+            //             this.$axios.get(`/roles.json?searchName=${event.target.value}&pageNum=1&pageSize=30`).then(res => {
+            //                 this.roles = res.data.list
+            //             })
+            //         }
+            //     } else {
+            //         type == 1 ? this.getDepartmentList() : this.getRoleList();
+            //     }
+            // }.bind(this))()
         },
         handleClick() {
             this.copyerSearchName = "";
@@ -1119,11 +1214,24 @@ export default {
                 this.$set(this.approverConfig, 'examineEndDirectorLevel', 1)
             }
         },
-        addApprover() {
+        async addApprover() {
             this.approverVisible = true;
             this.approverSearchName = "";
-            this.getDepartmentList();
-            this.approverEmplyessList = [];
+            await this.getAllPersons();
+            // debugger
+            // await this.getDepartmentList();
+            this.approverEmplyessList = this.nodeConfig.persons.reduce((r, c) => {
+              return [
+                ...r,
+                {
+                  userName: c.userName,
+                  account: c.account
+                }
+              ]
+            }, []);
+            // this.nodeConfig.persons
+            sessionStorage.setItem('persons', JSON.stringify(this.nodeConfig.persons))
+            sessionStorage.setItem('test', JSON.stringify(this.approverEmplyessList))
             for (var i = 0; i < this.approverConfig.nodeUserList.length; i++) {
                 var { name, targetId } = this.approverConfig.nodeUserList[i];
                 this.approverEmplyessList.push({
@@ -1146,26 +1254,29 @@ export default {
             }
         },
         sureApprover() {
-            this.approverConfig.nodeUserList = [];
-            if (this.approverConfig.settype == 1 || (this.approverConfig.settype == 4 && this.approverConfig.selectRange == 2)) {
-                this.approverEmplyessList.map(item => {
-                    this.approverConfig.nodeUserList.push({
-                        type: 1,
-                        targetId: item.id,
-                        name: item.employeeName
-                    })
-                });
-                this.approverVisible = false;
-            } else if (this.approverConfig.settype == 4 && this.approverConfig.selectRange == 3) {
-                this.roleList.map(item => {
-                    this.approverConfig.nodeUserList.push({
-                        type: 2,
-                        targetId: item.roleId,
-                        name: item.roleName
-                    })
-                });
-                this.approverRoleVisible = false;
-            }
+            sessionStorage.setItem('test2', JSON.stringify(this.approverEmplyessList))
+            this.approverConfig.persons = this.approverEmplyessList
+            this.approverVisible = false;
+            // this.approverConfig.nodeUserList = [];
+            // if (this.approverConfig.settype == 1 || (this.approverConfig.settype == 4 && this.approverConfig.selectRange == 2)) {
+            //     this.approverEmplyessList.map(item => {
+            //         this.approverConfig.nodeUserList.push({
+            //             type: 1,
+            //             targetId: item.id,
+            //             name: item.employeeName
+            //         })
+            //     });
+            //     this.approverVisible = false;
+            // } else if (this.approverConfig.settype == 4 && this.approverConfig.selectRange == 3) {
+            //     this.roleList.map(item => {
+            //         this.approverConfig.nodeUserList.push({
+            //             type: 2,
+            //             targetId: item.roleId,
+            //             name: item.roleName
+            //         })
+            //     });
+            //     this.approverRoleVisible = false;
+            // }
         },
         setApproverStr(nodeConfig) {
             if (nodeConfig.settype == 1) {
@@ -1293,14 +1404,14 @@ export default {
             a.splice(includesIndex, 1);
             item.zdy1 = a.toString()
         },
-        toggleClass(arr, elem, key = 'id') {
+        toggleClass(arr, elem, key = 'account') {
             return arr.some(item => { return item[key] == elem[key] });
         },
-        toChecked(arr, elem, key = 'id') {
+        toChecked(arr, elem, key = 'account') {
             var isIncludes = this.toggleClass(arr, elem, key);
-            !isIncludes ? arr.push(elem) : this.removeEle(arr, elem, key);
+            !isIncludes ? this.approverEmplyessList.push(elem) : this.removeEle(arr, elem, key);
         },
-        removeEle(arr, elem, key = 'id') {
+        removeEle(arr, elem, key = 'account') {
             var includesIndex;
             arr.map((item, index) => {
                 if (item[key] == elem[key]) {
@@ -1314,10 +1425,78 @@ export default {
                 this.roles = res.data.list;
             })
         },
-        getDepartmentList(parentId = 0) {
-            this.$axios.get("/departments.json?parentId=" + parentId).then(res => {
-                this.departments = res.data;
-            })
+        changeDataPartment(data) {
+          return data.reduce((r, c) => {
+            if(c.userList.length > 0) {
+              r[c.id] = {
+                orgName: c.orgName,
+                list: c.userList,
+                userNo: c.userNo
+              }
+            }else {
+              if(c.list.length > 0 && c.userNo > 0) {
+                r[c.id] = {
+                  ...this.changeDataPartment(c.list),
+                  userNo: c.userNo,
+                  orgName: c.orgName
+                }
+              }
+            }
+            return r
+          }, {})
+        },
+        getDepartmentList(parentId) {
+            this.clickIds.push(parentId)
+            let target = this.persons
+              for(let i = 0; i < this.clickIds.length; i++) {
+                target = target[this.clickIds[i]]
+              }
+            if(target.list) {
+              this.selectPersonShow = target.list.reduce((r, c) => {
+                return [
+                  ...r,
+                  {
+                    userName: c.userName,
+                    orgNo: c.orgNo,
+                    account: c.account,
+                    postName: c.postName
+                  }
+                ]
+              }, [])
+            }else {
+              this.selectPersonShow = Object.keys(target).reduce((r, c) => {
+                return [
+                  ...r,
+                  {
+                    id: c,
+                    orgName: target[c].orgName
+                  }
+                ]
+              }, [])
+              // this.selectPersonShow[parentId].list
+            }
+            // Object.keys(this.persons).reduce((r, c) => {
+            //   return [
+            //     ...r,
+            //     {
+            //       id: c,
+            //       orgName: this.persons[c].orgName
+            //     }
+            //   ]
+            // }, [])
+        },
+        async getAllPersons() {
+          const res = await this.$axios.get('/platform/get/v1/org_user_tree')
+          this.persons = this.changeDataPartment(res.data.list)
+          this.selectPersonShow = Object.keys(this.persons).reduce((r, c) => {
+            return [
+              ...r,
+              {
+                id: c,
+                orgName: this.persons[c].orgName
+              }
+            ]
+          }, [])
         },
         delNode() {
             this.$emit("update:nodeConfig", this.nodeConfig.childNode);
@@ -1411,7 +1590,6 @@ export default {
             }, {})
             if(conditionsequenceflow) {
                 const str = conditionsequenceflow.substring(0, conditionsequenceflow.length - 1).slice(2)
-                
                 this.conditionForm = str.split('&&').reduce((r, c) => {
                     const k = c.split('==')[0]
                     const v = c.split('==')[1]
@@ -1487,6 +1665,7 @@ export default {
 .person_body {
     border: 1px solid #f5f5f5;
     height: 500px;
+    display: flex;
 }
 .person_tree {
     padding: 10px 12px 0 8px;
@@ -1751,5 +1930,9 @@ el-radio-group {
 }
 .el-tab-pane {
     padding: 12px;
+}
+.el-select {
+  margin-right: 20px;
+  margin-bottom: 20px;
 }
 </style>

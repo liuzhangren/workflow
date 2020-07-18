@@ -2,7 +2,7 @@
     <div>
         <div>
             <div class="fd-nav">
-                <div class="fd-nav-left">
+              <div class="fd-nav-left">
                     <!-- <div class="fd-nav-back" @click="toReturn"></div> -->
                     <div class="fd-nav-title">自定义工作流</div>
                 </div>
@@ -15,6 +15,7 @@
                     <button type="button" @click="saveProcess(1)" class="ant-btn button-publish" ><span>发布</span></button>
                 </div>
             </div>
+            
             <div class="fd-nav-content">
                 <section v-if="actives['1']" class="dingflow-design">
                     <el-card class="box-card">
@@ -147,30 +148,7 @@ export default {
                 this.tableId = this.processConfig.tableId
             })
         }
-
-        // }
-        // this.$axios.get(`/process/v1/model`, {
-        //     headers: {
-        //         token: result.token
-        //     },
-        //     params: {
-        //         id: result.id
-        //     }
-        // }).then((res) => {
-        //     if(res.data.customJson) {
-        //         this.processConfig = JSON.parse(res.data.customJson);
-        //         this.nodeConfig = this.processConfig.nodeConfig;
-        //         this.flowPermission = this.processConfig.flowPermission;
-        //         this.directorMaxLevel = this.processConfig.directorMaxLevel;
-        //         this.workFlowDef = this.processConfig.workFlowDef
-        //         this.tableId = this.processConfig.tableId
-        //     }else {
-                
-        //     }
-        // })
-        this.basicSettings = result 
-        // console.log({result})
-        
+        this.basicSettings = result
     },
     methods: {
         selectItem(index) {
@@ -188,7 +166,6 @@ export default {
             const res = func(this.processConfig)
             res.properties.name = this.basicSettings.name
             res.properties.process_id = this.basicSettings.flowKey
-            debugger
             window.parent.postMessage({json_xml: res, json: this.processConfig, isDeploy: v, values: this.editForm }, '*');
         },
         cancelModal() {
@@ -290,9 +267,10 @@ export default {
     z-index: 100;
 }
 .box-card {
-    width: 60%;
-    max-height: 600px;
-    margin-top: 40px;
+    min-height: 600px;
+    margin: 12px;
+    margin-top: 20px;
+    padding: 20px;
     padding: 20px;
 }
 </style>

@@ -6,18 +6,36 @@
                     <!-- <div class="fd-nav-back" @click="toReturn"></div> -->
                     <div class="fd-nav-title">自定义工作流</div>
                 </div>
-                <div class="fd-nav-center">
+                <div v-if="type === 0" class="fd-nav-center">
                     <div @click="selectItem(1)" :class="`fd-nav-center-item ${actives[1]?'fd-nav-center-item-active':''}`"><div class="fd-nav-center-circle-box"><span class="fd-nav-center-circle">1</span></div><div style="fontSize: 18px; margin-left: 4px;">基础设置</div></div>
                     <div @click="selectItem(2)" :class="`fd-nav-center-item ${actives[2]?'fd-nav-center-item-active':''}`"><div class="fd-nav-center-circle-box"><span class="fd-nav-center-circle">2</span></div><div style="fontSize: 18px; margin-left: 4px;">流程设计</div></div>
                 </div>
-                <div class="fd-nav-right">
+                <div v-if="type === 0" class="fd-nav-right">
                     <button type="button" @click="saveProcess(0)" class="ant-btn button-publish"><span>保存</span></button>
                     <button type="button" @click="saveProcess(1)" class="ant-btn button-publish" ><span>发布</span></button>
                 </div>
             </div>
             
             <div class="fd-nav-content">
+              <div v-if="type === 1">
                 <section v-if="actives['1']" class="dingflow-design">
+                    <div class="zoom">
+                        <div :class="'zoom-out'+ (nowVal==50?' disabled':'')" @click="zoomSize(1)"></div>
+                        <span>{{nowVal}}%</span>
+                        <div :class="'zoom-in'+ (nowVal==300?' disabled':'')" @click="zoomSize(2)"></div>
+                    </div>
+                    <div class="box-scale" id="box-scale" :style="'transform: scale('+nowVal/100+'); transform-origin: 50% 0px 0px; min-height: 600px;'">
+                        <nodeWrap :type.sync="type" :test.sync="test" :processConfig.sync="processConfig" :nodeConfig.sync="nodeConfig" :flowPermission.sync="flowPermission" 
+                        :isTried.sync="isTried" :directorMaxLevel="directorMaxLevel" :tableId="tableId"></nodeWrap>
+                        <div class="end-node">
+                            <div class="end-node-circle"></div>
+                            <div class="end-node-text">流程结束</div>
+                        </div>
+                    </div>
+                </section>
+              </div>
+              <div v-else>
+                <!-- <section v-if="actives['1']" class="dingflow-design">
                     <el-card class="box-card">
                         <el-form :model="editForm" label-width="80px">
                             <el-form-item label="流程编号">
@@ -28,7 +46,9 @@
                             </el-form-item>
                         </el-form>
                     </el-card>
-                </section>
+                </section> -->
+              </div>
+                
                 <section v-if="actives['2']" class="dingflow-design">
                     <div class="zoom">
                         <div :class="'zoom-out'+ (nowVal==50?' disabled':'')" @click="zoomSize(1)"></div>
@@ -36,7 +56,7 @@
                         <div :class="'zoom-in'+ (nowVal==300?' disabled':'')" @click="zoomSize(2)"></div>
                     </div>
                     <div class="box-scale" id="box-scale" :style="'transform: scale('+nowVal/100+'); transform-origin: 50% 0px 0px; min-height: 600px;'">
-                        <nodeWrap :test.sync="test" :processConfig.sync="processConfig" :nodeConfig.sync="nodeConfig" :flowPermission.sync="flowPermission" 
+                        <nodeWrap :type.sync="type" :test.sync="test" :processConfig.sync="processConfig" :nodeConfig.sync="nodeConfig" :flowPermission.sync="flowPermission" 
                         :isTried.sync="isTried" :directorMaxLevel="directorMaxLevel" :tableId="tableId"></nodeWrap>
                         <div class="end-node">
                             <div class="end-node-circle"></div>
@@ -75,7 +95,7 @@
 </template>
 <script>
 import func from '../../utils/getActivitiData'
-import nodeWrap from '../../components/nodeWrap';
+import getRoute from '../../utils/getFlowRoute'
 export default {
     data() {
         return {
@@ -84,6 +104,7 @@ export default {
                 flowKey: '',
                 categoryId: ''
             },
+            type: 0,
             actives: {
                 1: true,
                 2: false
@@ -129,13 +150,45 @@ export default {
         //     this.tableId = this.processConfig.tableId
         // })
 
+        /** 行动路径
+         * sid-6f6bf6ff-0e39-4518-a897-7d96f8a0921b
+         * sid-ac1a096f-bff9-41ef-a2f0-89a4e57b7d89
+         * sid-cbb089a7-14cf-4d68-bd1d-4a5c521a1998  当前流程到该节点
+         * sid-1cb5bae2-afdc-4c40-a4ba-4de49ceb6cea
+         * sid-c9464abf-6014-4e0d-825e-9f305a7612f4
+         * sid-16f31486-aada-4ab5-bed9-ccf2928c09aa
+         * sid-1c9742e9-ee55-4dd3-a4c4-a254e1f35464
+         */
+        const flowRoute = JSON.parse(sessionStorage.getItem('flowRoute'))
         if(customJson != 'null') {
+          if(Object.keys(flowRoute).length > 0) {
+            this.type = 1
+            this.nowVal = 50
+            this.processConfig = JSON.parse(customJson);
+            this.nodeConfig = getRoute(this.processConfig, flowRoute);
+            this.flowPermission = this.processConfig.flowPermission;
+            this.directorMaxLevel = this.processConfig.directorMaxLevel;
+            this.workFlowDef = this.processConfig.workFlowDef
+            this.tableId = this.processConfig.tableId
+          }else {
             this.processConfig = JSON.parse(customJson);
             this.nodeConfig = this.processConfig.nodeConfig;
             this.flowPermission = this.processConfig.flowPermission;
             this.directorMaxLevel = this.processConfig.directorMaxLevel;
             this.workFlowDef = this.processConfig.workFlowDef
             this.tableId = this.processConfig.tableId
+          }
+          
+          // if (result.isShow) {
+            
+          // }else {
+          //   this.processConfig = JSON.parse(customJson);
+          //   this.nodeConfig = this.processConfig.nodeConfig;
+          //   this.flowPermission = this.processConfig.flowPermission;
+          //   this.directorMaxLevel = this.processConfig.directorMaxLevel;
+          //   this.workFlowDef = this.processConfig.workFlowDef
+          //   this.tableId = this.processConfig.tableId
+          // }
         }else {
             this.$axios.get("/flow/data.json", {
             workFlowDefId: this.$route.params.workFlowDefId

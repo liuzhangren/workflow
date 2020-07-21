@@ -18737,6 +18737,25 @@ html.wf-cursor-move * {
   cursor: pointer
 }
 
+.node-wrap-box-pass {
+  display: -webkit-inline-box;
+  display: -ms-inline-flexbox;
+  display: inline-flex;
+  -webkit-box-orient: vertical;
+  -webkit-box-direction: normal;
+  -ms-flex-direction: column;
+  flex-direction: column;
+  position: relative;
+  width: 220px;
+  min-height: 72px;
+  -ms-flex-negative: 0;
+  flex-shrink: 0;
+  background: #fff;
+  border-radius: 4px;
+  cursor: pointer;
+  border: 5px solid greenyellow;
+}
+
 .node-wrap-box:after {
   pointer-events: none;
   content: "";
@@ -18752,6 +18771,28 @@ html.wf-cursor-move * {
   box-shadow: 0 2px 5px 0 rgba(0, 0, 0, .1)
 }
 
+.node-wrap-box-pass:after {
+  pointer-events: none;
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 2;
+  border-radius: 4px;
+  border: 1px solid transparent;
+  transition: all .1s cubic-bezier(.645, .045, .355, 1);
+  box-shadow: 0 2px 5px 0 rgba(0, 0, 0, .1)
+}
+
+.node-wrap-box-pass.active:after,
+.node-wrap-box-pass:active:after,
+.node-wrap-box-pass:hover:after {
+  border: 1px solid #3296fa;
+  box-shadow: 0 0 6px 0 rgba(50, 150, 250, .3)
+}
+
 .node-wrap-box.active:after,
 .node-wrap-box:active:after,
 .node-wrap-box:hover:after {
@@ -18765,9 +18806,36 @@ html.wf-cursor-move * {
   display: block
 }
 
+.node-wrap-box-pass.active .close,
+.node-wrap-box-pass:active .close,
+.node-wrap-box-pass:hover .close {
+  display: block
+}
+
+.node-wrap-box-pass.error:after {
+  border: 1px solid #f25643;
+  box-shadow: 0 2px 5px 0 rgba(0, 0, 0, .1)
+}
+
 .node-wrap-box.error:after {
   border: 1px solid #f25643;
   box-shadow: 0 2px 5px 0 rgba(0, 0, 0, .1)
+}
+
+.node-wrap-box-pass .title {
+  position: relative;
+  display: flex;
+  align-items: center;
+  padding-left: 16px;
+  padding-right: 30px;
+  width: 100%;
+  height: 24px;
+  line-height: 24px;
+  font-size: 12px;
+  color: #fff;
+  text-align: left;
+  background: #576a95;
+  border-radius: 4px 4px 0 0
 }
 
 .node-wrap-box .title {
@@ -18791,8 +18859,32 @@ html.wf-cursor-move * {
   margin-right: 5px
 }
 
+.node-wrap-box-pass .title .iconfont {
+  font-size: 12px;
+  margin-right: 5px
+}
+
+.node-wrap-box-pass .placeholder {
+  color: #bfbfbf
+}
+
 .node-wrap-box .placeholder {
   color: #bfbfbf
+}
+
+.node-wrap-box-pass .close {
+  display: none;
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 20px;
+  height: 20px;
+  font-size: 14px;
+  color: #fff;
+  border-radius: 50%;
+  text-align: center;
+  line-height: 20px
 }
 
 .node-wrap-box .close {
@@ -18810,11 +18902,26 @@ html.wf-cursor-move * {
   line-height: 20px
 }
 
+.node-wrap-box-pass .content {
+  position: relative;
+  font-size: 14px;
+  padding: 16px;
+  padding-right: 30px
+}
+
 .node-wrap-box .content {
   position: relative;
   font-size: 14px;
   padding: 16px;
   padding-right: 30px
+}
+
+.node-wrap-box-pass .content .text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical
 }
 
 .node-wrap-box .content .text {
@@ -18823,6 +18930,17 @@ html.wf-cursor-move * {
   display: -webkit-box;
   -webkit-line-clamp: 3;
   -webkit-box-orient: vertical
+}
+
+.node-wrap-box-pass .content .arrow {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 20px;
+  height: 14px;
+  font-size: 14px;
+  color: #979797
 }
 
 .node-wrap-box .content .arrow {

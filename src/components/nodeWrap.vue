@@ -1,7 +1,36 @@
 <template>
     <div>
         <div class="node-wrap" v-if="nodeConfig.type!=4">
-            <div class="node-wrap-box" :class="(nodeConfig.type==0?'start-node ':'')+(isTried?'active':'')">
+            <div v-if="type===1" :class="(nodeConfig.type==0?'start-node ':'')+(isTried?'active':'')+(nodeConfig.state?'node-wrap-box-pass':'node-wrap-box')" >
+                <div>
+                    <div class="title" :style="'background: rgb('+ ['87, 106, 149','255, 148, 62','50, 150, 250'][nodeConfig.type] +');'">
+                        <span class="iconfont" v-show="nodeConfig.type==1"></span>
+                        <span class="iconfont" v-show="nodeConfig.type==2"></span>
+                        <span v-if="nodeConfig.type==0">{{nodeConfig.nodeName}}</span>
+                        <input type="text" class="ant-input editable-title-input" v-if="nodeConfig.type!=0&&isInput"
+                        @blur="blurEvent()" @focus="$event.currentTarget.select()" v-focus
+                        v-model="nodeConfig.nodeName" :placeholder="placeholderList[nodeConfig.type]">
+                        <span class="editable-title" @click="clickEvent()" v-if="nodeConfig.type!=0&&!isInput">{{nodeConfig.nodeName}}</span>
+                        <i class="anticon anticon-close close" v-if="nodeConfig.type!=0" @click="delNode()"></i>
+                    </div>
+                    <div class="content" @click="setPerson">
+                        <div class="text" v-if="nodeConfig.type==0">{{arrToStr(flowPermission)?arrToStr(flowPermission):'Start'}}</div>
+                        <div class="text" v-if="nodeConfig.type==1">
+                            <span class="placeholder" v-if="!setApproverStr(nodeConfig)">审核节点</span>
+                            {{setApproverStr(nodeConfig)}}
+                        </div>
+                        <div class="text" v-if="nodeConfig.type==2">
+                            <span class="placeholder" v-if="!copyerStr(nodeConfig)">请选择{{placeholderList[nodeConfig.type]}}</span>
+                            {{copyerStr(nodeConfig)}}
+                        </div>
+                        <i class="anticon anticon-right arrow"></i>
+                    </div>
+                    <!-- <div class="error_tip" v-if="isTried&&nodeConfig.error">
+                        <i class="anticon anticon-exclamation-circle" style="color: rgb(242, 86, 67);"></i>
+                    </div> -->
+                </div>
+            </div>
+            <div v-else :class="(nodeConfig.type==0?'start-node ':'')+(isTried?'active':'')+(nodeConfig.state?'node-wrap-box-pass':'node-wrap-box')" >
                 <div>
                     <div class="title" :style="'background: rgb('+ ['87, 106, 149','255, 148, 62','50, 150, 250'][nodeConfig.type] +');'">
                         <span class="iconfont" v-show="nodeConfig.type==1"></span>
@@ -32,7 +61,8 @@
             </div>
             <addNode :nodeConfig='nodeConfig' :childNodeP.sync="nodeConfig.childNode"></addNode>
         </div>
-        <div class="branch-wrap" v-if="nodeConfig.type==4">
+        <!-- 路由 -->
+        <div class="branch-wrap" v-if="nodeConfig.type==4"> 
             <div class="branch-box-wrap">
                 <div class="branch-box">
                     <button class="add-branch" @click="addTerm">添加条件</button>
@@ -717,14 +747,14 @@
                 </div>
             </div>
         </el-drawer> -->
-        <nodeWrap  v-if="nodeConfig.childNode && nodeConfig.childNode" :nodeConfig.sync="nodeConfig.childNode" :tableId="tableId"
+        <nodeWrap :type="type"  v-if="nodeConfig.childNode && nodeConfig.childNode" :nodeConfig.sync="nodeConfig.childNode" :tableId="tableId"
         :isTried.sync="isTried" :directorMaxLevel="directorMaxLevel"></nodeWrap>
     </div>
 </template>
 <script>
 import { v4 as uuidv4 } from 'uuid';
 export default {
-    props: ["nodeConfig", "flowPermission", "directorMaxLevel", "isTried", "tableId"],
+    props: ["nodeConfig", "flowPermission", "directorMaxLevel", "isTried", "tableId", "type"],
     data() {
         return {
             clickIds: [],
